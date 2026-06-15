@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body style="padding: 40px; font-family: sans-serif">
+  <h1>Backend Connection Test</h1>
+  <input id="email" placeholder="Email" value="test@test.com" style="padding:10px; font-size:16px; display:block; margin-bottom:10px;">
+  <input id="pass" type="password" placeholder="Password" value="123456" style="padding:10px; font-size:16px; display:block; margin-bottom:10px;">
+  <button onclick="testAPI()" style="padding:15px 30px; font-size:18px; background:#059669; color:white; border:none; border-radius:8px; cursor:pointer;">Test Register</button>
+  <p id="result" style="font-size:18px; margin-top:20px; color:blue;">Click the button to test the backend!</p>
+
+  <script>
+    async function testAPI() {
+      document.getElementById('result').innerText = "Connecting to server...";
+      document.getElementById('result').style.color = "orange";
+      try {
+        const res = await fetch('http://localhost:5000/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Test User', email: document.getElementById('email').value, password: document.getElementById('pass').value })
+        });
+        const data = await res.json();
+        document.getElementById('result').innerText = "SUCCESS! Backend works! Server says: " + JSON.stringify(data);
+        document.getElementById('result').style.color = "green";
+      } catch (err) {
+        document.getElementById('result').innerText = "FAILED! Error: " + err.message;
+        document.getElementById('result').style.color = "red";
+      }
+    }
+  </script>
+</body>
+</html>
