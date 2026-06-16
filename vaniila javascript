@@ -1,0 +1,1622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fitness Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b' },
+            accent: { 400:'#fb923c',500:'#f97316',600:'#ea580c' }
+          },
+          fontFamily: { sans: ['Inter','sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    ::selection { background: #059669; color: #fff; }
+    .fade-in { animation: fadeIn 0.4s ease-out; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideUp { from{opacity:0;transform:translateY(40px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse-glow { 0%,100%{box-shadow:0 0 0 0 rgba(5,150,105,0.3)} 50%{box-shadow:0 0 0 8px rgba(5,150,105,0)} }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0,0,0,0.12); }
+    .nav-item { transition: all 0.15s ease; }
+    .progress-fill { transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+    .modal-overlay { background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); }
+    .slide-up { animation: slideUp 0.3s ease-out; }
+    .food-item:hover { background: #f0fdf4; }
+    .google-btn { transition: all 0.2s ease; }
+    .google-btn:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); transform: translateY(-1px); }
+    .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: 600; }
+    .tab-inactive { border-bottom: 2px solid transparent; color: #94a3b8; }
+    .meal-section { transition: all 0.2s ease; }
+    .meal-section:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+    .verification-input { letter-spacing: 0.5em; text-align: center; font-size: 1.5rem; font-weight: 700; }
+    input:focus, select:focus, textarea:focus { outline: none; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+  <div id="app"></div>
+  <div id="modal-root"></div>
+
+  <script>
+    // ============================================================
+    // FOOD DATABASE
+    // ============================================================
+    const FOOD_DATABASE = [
+      { id:1, name:'Chicken Breast, Grilled', serving:'4 oz (112g)', calories:184, protein:35, carbs:0, fat:4, category:'Protein' },
+      { id:2, name:'Chicken Thigh, Roasted', serving:'4 oz (112g)', calories:232, protein:26, carbs:0, fat:14, category:'Protein' },
+      { id:3, name:'Chicken Wing', serving:'1 wing (34g)', calories:64, protein:6, carbs:0, fat:4, category:'Protein' },
+      { id:4, name:'Shredded Chicken', serving:'3 oz (85g)', calories:149, protein:28, carbs:0, fat:3, category:'Protein' },
+      { id:5, name:'Rotisserie Chicken', serving:'1 medium breast', calories:165, protein:31, carbs:0, fat:4, category:'Protein' },
+      { id:6, name:'Chicken Stir Fry', serving:'1 cup (140g)', calories:195, protein:24, carbs:8, fat:7, category:'Protein' },
+      { id:7, name:'Chicken Nuggets', serving:'6 pieces (90g)', calories:270, protein:13, carbs:17, fat:16, category:'Protein' },
+      { id:8, name:'Chicken Salad', serving:'1 cup (135g)', calories:230, protein:20, carbs:4, fat:15, category:'Protein' },
+      { id:9, name:'Chicken Soup', serving:'1 cup (240ml)', calories:75, protein:7, carbs:8, fat:2, category:'Soup' },
+      { id:10, name:'Chicken Burrito', serving:'1 burrito (220g)', calories:445, protein:22, carbs:42, fat:19, category:'Meal' },
+      { id:11, name:'Beef Sirloin, Grilled', serving:'4 oz (112g)', calories:207, protein:26, carbs:0, fat:11, category:'Protein' },
+      { id:12, name:'Ground Beef 85% Lean', serving:'4 oz (112g)', calories:246, protein:21, carbs:0, fat:17, category:'Protein' },
+      { id:13, name:'Beef Steak, Ribeye', serving:'4 oz (112g)', calories:294, protein:24, carbs:0, fat:22, category:'Protein' },
+      { id:14, name:'Beef Jerky', serving:'1 oz (28g)', calories:82, protein:7, carbs:4, fat:5, category:'Snack' },
+      { id:15, name:'Salmon, Grilled', serving:'4 oz (112g)', calories:233, protein:25, carbs:0, fat:14, category:'Protein' },
+      { id:16, name:'Tuna, Canned in Water', serving:'1 can (142g)', calories:132, protein:29, carbs:0, fat:1, category:'Protein' },
+      { id:17, name:'Shrimp, Boiled', serving:'4 oz (112g)', calories:112, protein:24, carbs:1, fat:1, category:'Protein' },
+      { id:18, name:'Tilapia, Baked', serving:'4 oz (112g)', calories:128, protein:26, carbs:0, fat:3, category:'Protein' },
+      { id:19, name:'Egg, Large', serving:'1 large (50g)', calories:72, protein:6, carbs:0, fat:5, category:'Protein' },
+      { id:20, name:'Egg White', serving:'1 large (33g)', calories:17, protein:4, carbs:0, fat:0, category:'Protein' },
+      { id:21, name:'Scrambled Eggs (2)', serving:'2 eggs', calories:182, protein:12, carbs:2, fat:14, category:'Breakfast' },
+      { id:22, name:'Brown Rice, Cooked', serving:'1 cup (195g)', calories:216, protein:5, carbs:45, fat:1.8, category:'Grain' },
+      { id:23, name:'White Rice, Cooked', serving:'1 cup (186g)', calories:242, protein:4, carbs:53, fat:0.4, category:'Grain' },
+      { id:24, name:'Quinoa, Cooked', serving:'1 cup (185g)', calories:222, protein:8, carbs:39, fat:3.6, category:'Grain' },
+      { id:25, name:'Oatmeal, Cooked', serving:'1 cup (234g)', calories:154, protein:6, carbs:27, fat:2.6, category:'Breakfast' },
+      { id:26, name:'Whole Wheat Bread', serving:'1 slice (28g)', calories:69, protein:4, carbs:12, fat:1, category:'Grain' },
+      { id:27, name:'White Bread', serving:'1 slice (30g)', calories:79, protein:3, carbs:15, fat:1, category:'Grain' },
+      { id:28, name:'Pasta, Cooked', serving:'1 cup (140g)', calories:220, protein:8, carbs:43, fat:1.3, category:'Grain' },
+      { id:29, name:'Sweet Potato, Baked', serving:'1 medium (114g)', calories:103, protein:2, carbs:24, fat:0.1, category:'Vegetable' },
+      { id:30, name:'Potato, Baked', serving:'1 medium (156g)', calories:145, protein:4, carbs:34, fat:0.2, category:'Vegetable' },
+      { id:31, name:'Banana', serving:'1 medium (118g)', calories:105, protein:1, carbs:27, fat:0.4, category:'Fruit' },
+      { id:32, name:'Apple', serving:'1 medium (182g)', calories:95, protein:0, carbs:25, fat:0.3, category:'Fruit' },
+      { id:33, name:'Blueberries', serving:'1 cup (148g)', calories:84, protein:1, carbs:21, fat:0.5, category:'Fruit' },
+      { id:34, name:'Strawberries', serving:'1 cup (152g)', calories:49, protein:1, carbs:12, fat:0.5, category:'Fruit' },
+      { id:35, name:'Orange', serving:'1 medium (131g)', calories:62, protein:1, carbs:15, fat:0.2, category:'Fruit' },
+      { id:36, name:'Avocado', serving:'1/2 medium (68g)', calories:114, protein:1, carbs:6, fat:10, category:'Fruit' },
+      { id:37, name:'Greek Yogurt, Plain', serving:'1 cup (227g)', calories:146, protein:20, carbs:8, fat:4, category:'Dairy' },
+      { id:38, name:'Whole Milk', serving:'1 cup (244ml)', calories:149, protein:8, carbs:12, fat:8, category:'Dairy' },
+      { id:39, name:'Skim Milk', serving:'1 cup (245ml)', calories:83, protein:8, carbs:12, fat:0.2, category:'Dairy' },
+      { id:40, name:'Cheddar Cheese', serving:'1 oz (28g)', calories:113, protein:7, carbs:0, fat:9, category:'Dairy' },
+      { id:41, name:'Cottage Cheese', serving:'1 cup (226g)', calories:206, protein:28, carbs:6, fat:9, category:'Dairy' },
+      { id:42, name:'Almonds', serving:'1 oz (28g)', calories:164, protein:6, carbs:6, fat:14, category:'Nuts' },
+      { id:43, name:'Walnuts', serving:'1 oz (28g)', calories:185, protein:4, carbs:4, fat:18, category:'Nuts' },
+      { id:44, name:'Peanut Butter', serving:'2 tbsp (32g)', calories:188, protein:8, carbs:6, fat:16, category:'Nuts' },
+      { id:45, name:'Cashews', serving:'1 oz (28g)', calories:157, protein:5, carbs:9, fat:12, category:'Nuts' },
+      { id:46, name:'Broccoli, Steamed', serving:'1 cup (156g)', calories:55, protein:4, carbs:11, fat:0.6, category:'Vegetable' },
+      { id:47, name:'Spinach, Raw', serving:'2 cups (60g)', calories:14, protein:2, carbs:2, fat:0.2, category:'Vegetable' },
+      { id:48, name:'Mixed Salad', serving:'2 cups (110g)', calories:20, protein:1, carbs:4, fat:0.2, category:'Vegetable' },
+      { id:49, name:'Carrots, Raw', serving:'1 medium (61g)', calories:25, protein:1, carbs:6, fat:0, category:'Vegetable' },
+      { id:50, name:'Tomato', serving:'1 medium (123g)', calories:22, protein:1, carbs:5, fat:0.2, category:'Vegetable' },
+      { id:51, name:'Cucumber', serving:'1 cup (119g)', calories:16, protein:1, carbs:4, fat:0.2, category:'Vegetable' },
+      { id:52, name:'Bell Pepper', serving:'1 medium (119g)', calories:31, protein:1, carbs:6, fat:0.3, category:'Vegetable' },
+      { id:53, name:'Onion', serving:'1 medium (110g)', calories:44, protein:1, carbs:10, fat:0.1, category:'Vegetable' },
+      { id:54, name:'Mushrooms', serving:'1 cup (70g)', calories:15, protein:2, carbs:2, fat:0.2, category:'Vegetable' },
+      { id:55, name:'Green Beans', serving:'1 cup (100g)', calories:31, protein:2, carbs:7, fat:0.1, category:'Vegetable' },
+      { id:56, name:'Corn on the Cob', serving:'1 ear (73g)', calories:77, protein:3, carbs:17, fat:1, category:'Vegetable' },
+      { id:57, name:'Lentils, Cooked', serving:'1 cup (198g)', calories:230, protein:18, carbs:40, fat:0.8, category:'Legume' },
+      { id:58, name:'Black Beans, Cooked', serving:'1 cup (172g)', calories:227, protein:15, carbs:41, fat:0.9, category:'Legume' },
+      { id:59, name:'Chickpeas, Cooked', serving:'1 cup (164g)', calories:269, protein:14, carbs:45, fat:4.2, category:'Legume' },
+      { id:60, name:'Tofu, Firm', serving:'1/2 block (126g)', calories:181, protein:20, carbs:3, fat:11, category:'Protein' },
+      { id:61, name:'Protein Shake (Whey)', serving:'1 scoop + water', calories:120, protein:24, carbs:3, fat:1, category:'Supplement' },
+      { id:62, name:'Protein Bar', serving:'1 bar (60g)', calories:210, protein:20, carbs:22, fat:7, category:'Supplement' },
+      { id:63, name:'Granola', serving:'1/4 cup (30g)', calories:140, protein:3, carbs:20, fat:6, category:'Breakfast' },
+      { id:64, name:'Cereal (Cheerios)', serving:'1 cup (28g)', calories:100, protein:3, carbs:20, fat:2, category:'Breakfast' },
+      { id:65, name:'Pancakes', serving:'2 medium (77g)', calories:175, protein:5, carbs:28, fat:5, category:'Breakfast' },
+      { id:66, name:'Waffle', serving:'1 waffle (75g)', calories:218, protein:6, carbs:28, fat:10, category:'Breakfast' },
+      { id:67, name:'Bagel', serving:'1 medium (89g)', calories:245, protein:9, carbs:48, fat:1.5, category:'Breakfast' },
+      { id:68, name:'Cream Cheese', serving:'2 tbsp (29g)', calories:101, protein:2, carbs:1, fat:10, category:'Dairy' },
+      { id:69, name:'Butter', serving:'1 tbsp (14g)', calories:102, protein:0, carbs:0, fat:12, category:'Fat' },
+      { id:70, name:'Olive Oil', serving:'1 tbsp (14ml)', calories:119, protein:0, carbs:0, fat:14, category:'Fat' },
+      { id:71, name:'Honey', serving:'1 tbsp (21g)', calories:64, protein:0, carbs:17, fat:0, category:'Sweetener' },
+      { id:72, name:'Maple Syrup', serving:'1 tbsp (20g)', calories:52, protein:0, carbs:13, fat:0, category:'Sweetener' },
+      { id:73, name:'Dark Chocolate (70%)', serving:'1 oz (28g)', calories:170, protein:2, carbs:13, fat:12, category:'Snack' },
+      { id:74, name:'Trail Mix', serving:'1/4 cup (40g)', calories:173, protein:5, carbs:15, fat:11, category:'Snack' },
+      { id:75, name:'Rice Cakes', serving:'2 cakes (18g)', calories:70, protein:1, carbs:15, fat:0.5, category:'Snack' },
+      { id:76, name:'Hummus', serving:'2 tbsp (30g)', calories:70, protein:2, carbs:4, fat:5, category:'Snack' },
+      { id:77, name:'Guacamole', serving:'2 tbsp (30g)', calories:50, protein:1, carbs:3, fat:4, category:'Snack' },
+      { id:78, name:'Salsa', serving:'2 tbsp (30g)', calories:10, protein:0, carbs:2, fat:0, category:'Condiment' },
+      { id:79, name:'Soy Sauce', serving:'1 tbsp (15ml)', calories:9, protein:1, carbs:1, fat:0, category:'Condiment' },
+      { id:80, name:'Ketchup', serving:'1 tbsp (17g)', calories:17, protein:0, carbs:4, fat:0, category:'Condiment' },
+      { id:81, name:'Pizza Slice (Cheese)', serving:'1 slice (107g)', calories:285, protein:12, carbs:36, fat:10, category:'Meal' },
+      { id:82, name:'Cheeseburger', serving:'1 burger (173g)', calories:410, protein:24, carbs:33, fat:19, category:'Meal' },
+      { id:83, name:'Turkey Sandwich', serving:'1 sandwich (198g)', calories:310, protein:20, carbs:34, fat:9, category:'Meal' },
+      { id:84, name:'Caesar Salad', serving:'1 bowl (284g)', calories:360, protein:14, carbs:18, fat:25, category:'Meal' },
+      { id:85, name:'Grilled Chicken Salad', serving:'1 bowl (312g)', calories:310, protein:30, carbs:12, fat:17, category:'Meal' },
+      { id:86, name:'Spaghetti Bolognese', serving:'1 plate (336g)', calories:430, protein:22, carbs:52, fat:14, category:'Meal' },
+      { id:87, name:'Fried Rice', serving:'1 cup (198g)', calories:238, protein:7, carbs:30, fat:10, category:'Meal' },
+      { id:88, name:'Sushi Roll', serving:'6 pieces (156g)', calories:255, protein:9, carbs:40, fat:6, category:'Meal' },
+      { id:89, name:'Burrito Bowl', serving:'1 bowl (400g)', calories:540, protein:26, carbs:62, fat:20, category:'Meal' },
+      { id:90, name:'Oatmeal with Banana', serving:'1 bowl (300g)', calories:225, protein:7, carbs:45, fat:3, category:'Breakfast' },
+      { id:91, name:'Smoothie (Berry)', serving:'1 cup (250ml)', calories:150, protein:3, carbs:34, fat:1, category:'Beverage' },
+      { id:92, name:'Orange Juice', serving:'1 cup (248ml)', calories:112, protein:2, carbs:26, fat:0.5, category:'Beverage' },
+      { id:93, name:'Coffee, Black', serving:'1 cup (240ml)', calories:2, protein:0, carbs:0, fat:0, category:'Beverage' },
+      { id:94, name:'Latte (Whole Milk)', serving:'1 cup (240ml)', calories:190, protein:10, carbs:19, fat:7, category:'Beverage' },
+      { id:95, name:'Green Tea', serving:'1 cup (240ml)', calories:2, protein:0, carbs:0, fat:0, category:'Beverage' },
+      { id:96, name:'Cottage Cheese & Fruit', serving:'1 cup + 1/2 cup fruit', calories:230, protein:22, carbs:18, fat:5, category:'Snack' },
+      { id:97, name:'Apple & Peanut Butter', serving:'1 apple + 1 tbsp PB', calories:267, protein:7, carbs:30, fat:14, category:'Snack' },
+      { id:98, name:'Yogurt Parfait', serving:'1 cup (250g)', calories:230, protein:12, carbs:36, fat:5, category:'Breakfast' },
+      { id:99, name:'Tuna Salad Sandwich', serving:'1 sandwich (175g)', calories:350, protein:22, carbs:30, fat:15, category:'Meal' },
+      { id:100, name:'Veggie Omelette', serving:'1 omelette (150g)', calories:190, protein:14, carbs:4, fat:13, category:'Breakfast' }
+    ];
+
+    // ============================================================
+    // STATE & CONFIG
+    // ============================================================
+    const state = {
+      token: localStorage.getItem('fh_token'),
+      user: JSON.parse(localStorage.getItem('fh_user') || 'null'),
+      page: 'dashboard',
+      data: {},
+      activeChatId: null,
+      authTab: 'login',
+      showForgotPassword: false,
+      forgotStep: 1,
+      forgotEmail: '',
+      verificationCode: '',
+      showGoogleVerify: false,
+      googleUserData: null,
+      showFoodSearch: false,
+      foodSearchMealType: 'breakfast',
+      foodSearchQuery: '',
+      foodSearchTab: 'library',
+      myRecipes: JSON.parse(localStorage.getItem('fh_recipes') || '[]'),
+      myFoods: JSON.parse(localStorage.getItem('fh_myfoods') || '[]'),
+      showAddRecipe: false,
+      recipeIngredients: [],
+      showTncModal: false,
+      showChangePassword: false,
+      changePwStep: 1,
+      changePwCode: ''
+    };
+
+    // Simulated verification codes store
+    const verificationCodes = {};
+
+    const API = 'http://localhost:5000/api';
+    const chartInstances = {};
+
+    // ============================================================
+    // API HELPER
+    // ============================================================
+    async function api(endpoint, method = 'GET', body = null) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+      try {
+        const res = await fetch(`${API}${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : null });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'API Error');
+        return data;
+      } catch (err) {
+        showToast(err.message, 'error');
+        throw err;
+      }
+    }
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+    function showToast(message, type = 'success') {
+      const existing = document.querySelector('.fh-toast');
+      if (existing) existing.remove();
+      const toast = document.createElement('div');
+      const bg = type === 'error' ? 'bg-red-600' : type === 'info' ? 'bg-blue-600' : 'bg-brand-600';
+      const icon = type === 'error' ? 'x-circle' : type === 'info' ? 'info' : 'check-circle';
+      toast.className = `fh-toast fixed top-6 right-6 z-[9999] ${bg} text-white px-6 py-3.5 rounded-xl shadow-2xl fade-in flex items-center gap-3`;
+      toast.innerHTML = `<i data-lucide="${icon}" class="w-5 h-5"></i><span class="text-sm font-medium">${message}</span>`;
+      document.body.appendChild(toast);
+      lucide.createIcons({ nodes: [toast] });
+      setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(()=>toast.remove(),300); }, 3000);
+    }
+
+    // ============================================================
+    // VERIFICATION CODE GENERATOR
+    // ============================================================
+    function generateVerificationCode(email) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      verificationCodes[email] = code;
+      return code;
+    }
+
+    function verifyCode(email, code) {
+      return verificationCodes[email] === code;
+    }
+
+    // ============================================================
+    // MODAL SYSTEM
+    // ============================================================
+    function showModal(content) {
+      const root = document.getElementById('modal-root');
+      root.innerHTML = `<div class="modal-overlay fixed inset-0 z-[100] flex items-center justify-center p-4" onclick="closeModalOnOverlay(event)"><div class="slide-up bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto w-full max-w-lg">${content}</div></div>`;
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('modal-root').innerHTML = '';
+    }
+
+    function closeModalOnOverlay(e) {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    }
+
+    // ============================================================
+    // AUTH HELPERS
+    // ============================================================
+    function setAuth(token, user) {
+      state.token = token; state.user = user;
+      localStorage.setItem('fh_token', token);
+      localStorage.setItem('fh_user', JSON.stringify(user));
+    }
+
+    function logout() {
+      state.token = null; state.user = null; state.page = 'dashboard'; state.data = {}; state.activeChatId = null;
+      localStorage.removeItem('fh_token'); localStorage.removeItem('fh_user');
+      render();
+    }
+
+    function navigate(page) { state.page = page; render(); }
+
+    // ============================================================
+    // CHART HELPERS
+    // ============================================================
+    function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
+    function createChart(id, config) { destroyChart(id); const el = document.getElementById(id); if (!el) return null; chartInstances[id] = new Chart(el.getContext('2d'), config); return chartInstances[id]; }
+
+    function initPageCharts() {
+      const p = state.page;
+      const isTrainer = state.user?.role === 'trainer';
+      if (isTrainer) return;
+      if (p === 'dashboard') initDashboardCharts();
+      else if (p === 'calories') initCalorieCharts();
+      else if (p === 'weight') initWeightChart();
+      else if (p === 'workouts') initWorkoutCharts();
+    }
+
+    // ============================================================
+    // RENDER ORCHESTRATOR
+    // ============================================================
+    function render() {
+      const app = document.getElementById('app');
+      if (!state.token) { app.innerHTML = renderAuth(); }
+      else { app.innerHTML = renderApp(); }
+      lucide.createIcons();
+      setTimeout(() => initPageCharts(), 50);
+    }
+
+    // ============================================================
+    // TERMS & CONDITIONS CONTENT
+    // ============================================================
+    function renderTncContent() {
+      return `
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-slate-900">Terms & Conditions</h2>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <div class="text-sm text-slate-600 space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <p class="font-semibold text-slate-900">1. Acceptance of Terms</p>
+            <p>By creating an account and using Fitness Hub, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our services.</p>
+            <p class="font-semibold text-slate-900">2. Account Registration</p>
+            <p>You must provide accurate, complete, and current information during registration. You are responsible for safeguarding your password and for all activities under your account. You must be at least 13 years old to create an account.</p>
+            <p class="font-semibold text-slate-900">3. User Responsibilities</p>
+            <p>You agree to use Fitness Hub only for lawful purposes. You must not share false or misleading health information, attempt to gain unauthorized access to other users' accounts, or use the service in any way that could damage or impair the platform.</p>
+            <p class="font-semibold text-slate-900">4. Health Disclaimer</p>
+            <p>Fitness Hub provides general fitness and nutrition information for educational purposes only. This information is not a substitute for professional medical advice, diagnosis, or treatment. Always consult your healthcare provider before starting any fitness program.</p>
+            <p class="font-semibold text-slate-900">5. Data & Privacy</p>
+            <p>We collect and store your personal fitness data to provide our services. Your data is encrypted and stored securely. We do not sell your personal information to third parties. You may request deletion of your data at any time.</p>
+            <p class="font-semibold text-slate-900">6. Subscription & Payments</p>
+            <p>Paid subscription plans are billed in advance on a monthly or annual basis. You may cancel your subscription at any time, but no refunds will be provided for the remaining period. Prices are subject to change with 30 days notice.</p>
+            <p class="font-semibold text-slate-900">7. Intellectual Property</p>
+            <p>All content, features, and functionality of Fitness Hub are owned by Fitness Hub Inc. and are protected by international copyright, trademark, and other intellectual property laws.</p>
+            <p class="font-semibold text-slate-900">8. Limitation of Liability</p>
+            <p>Fitness Hub shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service. Our total liability shall not exceed the amount paid by you in the past 12 months.</p>
+            <p class="font-semibold text-slate-900">9. Modifications</p>
+            <p>We reserve the right to modify these terms at any time. Continued use of the service after changes constitutes acceptance of the modified terms. We will notify you of significant changes via email.</p>
+            <p class="font-semibold text-slate-900">10. Termination</p>
+            <p>We may terminate or suspend your account at any time for violating these terms. You may delete your account at any time from your profile settings. Upon termination, your right to use the service ceases immediately.</p>
+          </div>
+          <button onclick="closeModal()" class="mt-6 w-full bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold transition-all">I Understand</button>
+        </div>`;
+    }
+
+    // ============================================================
+    // AUTH PAGE (ENHANCED)
+    // ============================================================
+    function renderAuth() {
+      return `
+      <div class="min-h-screen flex bg-white">
+        <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-700 via-brand-800 to-brand-900 text-white flex-col justify-between p-12 relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-full opacity-10" style="background-image: radial-gradient(#fff 1px, transparent 1px); background-size: 20px 20px;"></div>
+          <div class="relative z-10">
+            <div class="flex items-center gap-3 mb-2">
+              <div class="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center border border-white/20"><i data-lucide="dumbbell" class="w-7 h-7 text-brand-200"></i></div>
+              <span class="text-2xl font-bold tracking-tight">Fitness Hub</span>
+            </div>
+          </div>
+          <div class="relative z-10 space-y-8">
+            <h2 class="text-5xl font-extrabold leading-tight tracking-tight">Transform your body.<br><span class="text-brand-300">Transform your life.</span></h2>
+            <p class="text-brand-200 text-lg">Track calories, log workouts, set goals, chat with trainers, and get AI-powered insights.</p>
+          </div>
+          <div class="relative z-10 text-brand-400 text-xs">© 2025 Fitness Hub</div>
+        </div>
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
+          <div class="max-w-md w-full fade-in">
+            <h2 class="text-3xl font-bold text-slate-900 mb-1">Welcome back</h2>
+            <p class="text-slate-500 mb-8">Sign in or create an account</p>
+            <div class="flex bg-slate-200/70 rounded-lg p-1 mb-6">
+              <button onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2.5 text-sm font-semibold rounded-md transition-all ${state.authTab==='login'?'bg-white text-slate-900 shadow-sm':'text-slate-500'}">Sign In</button>
+              <button onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2.5 text-sm font-semibold rounded-md transition-all ${state.authTab==='register'?'bg-white text-slate-900 shadow-sm':'text-slate-500'}">Sign Up</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" onsubmit="handleLogin(event)" class="${state.authTab==='login'?'':'hidden'} space-y-5">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label><input type="email" id="login-email" required placeholder="you@example.com" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <div class="relative">
+                  <input type="password" id="login-password" required placeholder="Enter password" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none pr-10">
+                  <button type="button" onclick="togglePasswordVisibility('login-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                </div>
+              </div>
+              <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="remember-me" class="w-4 h-4 text-brand-600 rounded border-slate-300"><span class="text-sm text-slate-600">Remember me</span></label>
+                <button type="button" onclick="openForgotPassword()" class="text-sm text-brand-600 hover:text-brand-700 font-medium">Forgot Password?</button>
+              </div>
+              <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Sign In</button>
+
+              <!-- Google Sign In -->
+              <div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div><div class="relative flex justify-center text-sm"><span class="px-3 bg-slate-50 text-slate-400">or continue with</span></div></div>
+              <button type="button" onclick="handleGoogleSignIn()" class="google-btn w-full flex items-center justify-center gap-3 py-3.5 border-2 border-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-50 bg-white">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Sign in with Google
+              </button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="register-form" onsubmit="handleRegister(event)" class="${state.authTab==='register'?'':'hidden'} space-y-5">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label><input type="text" id="reg-name" required placeholder="John Doe" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label><input type="email" id="reg-email" required placeholder="you@example.com" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                <div class="relative">
+                  <input type="password" id="reg-password" required minlength="6" placeholder="Min 6 characters" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none pr-10">
+                  <button type="button" onclick="togglePasswordVisibility('reg-password', this)" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                </div>
+              </div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">I am a...</label><select id="reg-role" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"><option value="customer">Customer (Track my fitness)</option><option value="trainer">Trainer (Coach clients)</option></select></div>
+
+              <!-- Terms & Conditions Checkbox -->
+              <div class="flex items-start gap-3">
+                <input type="checkbox" id="reg-tnc" required class="w-4 h-4 text-brand-600 rounded border-slate-300 mt-0.5">
+                <label for="reg-tnc" class="text-sm text-slate-600">I agree to the <button type="button" onclick="showModal(renderTncContent())" class="text-brand-600 hover:text-brand-700 font-semibold underline underline-offset-2">Terms & Conditions</button> and <button type="button" onclick="showModal(renderTncContent())" class="text-brand-600 hover:text-brand-700 font-semibold underline underline-offset-2">Privacy Policy</button></label>
+              </div>
+
+              <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Create Account</button>
+
+              <!-- Google Sign Up -->
+              <div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-200"></div></div><div class="relative flex justify-center text-sm"><span class="px-3 bg-slate-50 text-slate-400">or continue with</span></div></div>
+              <button type="button" onclick="handleGoogleSignIn()" class="google-btn w-full flex items-center justify-center gap-3 py-3.5 border-2 border-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-50 bg-white">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Sign up with Google
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i>';
+      } else {
+        input.type = 'password';
+        btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i>';
+      }
+      lucide.createIcons();
+    }
+
+    function switchAuthTab(tab) {
+      state.authTab = tab;
+      render();
+    }
+
+    // ============================================================
+    // GOOGLE SIGN IN
+    // ============================================================
+    function handleGoogleSignIn() {
+      showModal(renderGoogleSignInModal());
+    }
+
+    function renderGoogleSignInModal() {
+      return `
+        <div class="p-0">
+          <div class="bg-white rounded-t-2xl">
+            <div class="flex items-center justify-between p-5 border-b border-slate-100">
+              <div class="flex items-center gap-3">
+                <svg width="24" height="24" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                <span class="font-bold text-slate-900 text-lg">Sign in with Google</span>
+              </div>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <!-- Step 1: Email -->
+            <div id="google-step-1" class="p-6 space-y-5">
+              <p class="text-sm text-slate-600">Use your Google Account</p>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Email or phone</label>
+                <input type="email" id="google-email" required placeholder="your-email@gmail.com" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              </div>
+              <div class="text-sm text-slate-500">Only existing Google accounts can be used. We will verify your email address.</div>
+              <div class="flex justify-between items-center pt-2">
+                <button onclick="closeModal()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Cancel</button>
+                <button onclick="googleStep2()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all">Next</button>
+              </div>
+            </div>
+
+            <!-- Step 2: Password (hidden initially) -->
+            <div id="google-step-2" class="p-6 space-y-5 hidden">
+              <div class="flex items-center gap-3 mb-2">
+                <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-slate-500"></i></div>
+                <span id="google-email-display" class="text-sm text-slate-600"></span>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Enter your password</label>
+                <input type="password" id="google-password" required placeholder="Enter your password" class="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              </div>
+              <div class="text-xs text-slate-500">For verification purposes, we need to confirm it's you. A verification code will be sent to your email.</div>
+              <div class="flex justify-between items-center pt-2">
+                <button onclick="document.getElementById('google-step-2').classList.add('hidden');document.getElementById('google-step-1').classList.remove('hidden');" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Back</button>
+                <button onclick="googleVerifyEmail()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all">Verify</button>
+              </div>
+            </div>
+
+            <!-- Step 3: Verification Code -->
+            <div id="google-step-3" class="p-6 space-y-5 hidden">
+              <div class="text-center">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="mail-check" class="w-8 h-8 text-blue-600"></i></div>
+                <h3 class="text-lg font-bold text-slate-900 mb-1">Verify your email</h3>
+                <p class="text-sm text-slate-500">We sent a verification code to <span id="google-verify-email" class="font-semibold text-slate-700"></span></p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5 text-center">Enter 6-digit code</label>
+                <input type="text" id="google-verify-code" maxlength="6" required placeholder="000000" class="verification-input w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+              </div>
+              <div id="google-verify-code-display" class="text-center text-xs text-blue-600 font-medium"></div>
+              <div class="flex justify-between items-center pt-2">
+                <button onclick="resendGoogleCode()" class="text-blue-600 hover:text-blue-700 text-sm font-medium">Resend code</button>
+                <button onclick="verifyGoogleCode()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-semibold text-sm transition-all">Verify & Sign In</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function googleStep2() {
+      const email = document.getElementById('google-email').value.trim();
+      if (!email || !email.includes('@')) {
+        showToast('Please enter a valid email address', 'error');
+        return;
+      }
+      state.googleUserData = { email };
+      document.getElementById('google-email-display').textContent = email;
+      document.getElementById('google-step-1').classList.add('hidden');
+      document.getElementById('google-step-2').classList.remove('hidden');
+    }
+
+    function googleVerifyEmail() {
+      const email = state.googleUserData?.email;
+      if (!email) return;
+      const code = generateVerificationCode(email);
+      document.getElementById('google-step-2').classList.add('hidden');
+      document.getElementById('google-step-3').classList.remove('hidden');
+      document.getElementById('google-verify-email').textContent = email;
+      document.getElementById('google-verify-code-display').textContent = `Demo code: ${code}`;
+      showToast(`Verification code sent to ${email}`, 'info');
+    }
+
+    function resendGoogleCode() {
+      const email = state.googleUserData?.email;
+      if (!email) return;
+      const code = generateVerificationCode(email);
+      document.getElementById('google-verify-code-display').textContent = `Demo code: ${code}`;
+      showToast(`New code sent to ${email}`, 'info');
+    }
+
+    function verifyGoogleCode() {
+      const email = state.googleUserData?.email;
+      const code = document.getElementById('google-verify-code').value.trim();
+      if (!verifyCode(email, code)) {
+        showToast('Invalid verification code', 'error');
+        return;
+      }
+      // Simulate successful Google sign-in
+      const name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      const user = { name, email, role: 'customer', subscription: { plan: 'free' } };
+      setAuth('google-token-' + Date.now(), user);
+      closeModal();
+      showToast('Signed in with Google successfully!');
+      render();
+    }
+
+    // ============================================================
+    // FORGOT PASSWORD
+    // ============================================================
+    function openForgotPassword() {
+      state.forgotStep = 1;
+      state.forgotEmail = '';
+      showModal(renderForgotPasswordModal());
+    }
+
+    function renderForgotPasswordModal() {
+      if (state.forgotStep === 1) {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Forgot Password?</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="text-center mb-6">
+              <div class="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="lock-keyhole" class="w-8 h-8 text-brand-600"></i></div>
+              <p class="text-sm text-slate-500">Enter your email address and we'll send you a verification code to reset your password.</p>
+            </div>
+            <div class="space-y-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email Address</label><input type="email" id="forgot-email" required placeholder="you@example.com" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <button onclick="sendForgotCode()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Send Verification Code</button>
+            </div>
+          </div>`;
+      } else if (state.forgotStep === 2) {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Enter Verification Code</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="text-center mb-6">
+              <div class="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="mail-check" class="w-8 h-8 text-brand-600"></i></div>
+              <p class="text-sm text-slate-500">We sent a code to <span class="font-semibold text-slate-700">${state.forgotEmail}</span></p>
+            </div>
+            <div class="space-y-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5 text-center">6-digit code</label><input type="text" id="forgot-code" maxlength="6" required placeholder="000000" class="verification-input w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div id="forgot-code-hint" class="text-center text-xs text-brand-600 font-medium"></div>
+              <button onclick="verifyForgotCode()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Verify Code</button>
+              <button onclick="resendForgotCode()" class="w-full text-brand-600 hover:text-brand-700 py-2 text-sm font-medium">Resend Code</button>
+            </div>
+          </div>`;
+      } else if (state.forgotStep === 3) {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Reset Password</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="text-center mb-6">
+              <div class="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="key-round" class="w-8 h-8 text-brand-600"></i></div>
+              <p class="text-sm text-slate-500">Create a new password for your account.</p>
+            </div>
+            <div class="space-y-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">New Password</label><input type="password" id="new-password" required minlength="6" placeholder="Min 6 characters" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label><input type="password" id="confirm-password" required minlength="6" placeholder="Confirm password" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <button onclick="resetPassword()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Reset Password</button>
+            </div>
+          </div>`;
+      }
+    }
+
+    function sendForgotCode() {
+      const email = document.getElementById('forgot-email').value.trim();
+      if (!email || !email.includes('@')) {
+        showToast('Please enter a valid email', 'error');
+        return;
+      }
+      state.forgotEmail = email;
+      const code = generateVerificationCode(email);
+      state.forgotStep = 2;
+      showModal(renderForgotPasswordModal());
+      setTimeout(() => {
+        const hint = document.getElementById('forgot-code-hint');
+        if (hint) hint.textContent = `Demo code: ${code}`;
+      }, 100);
+      showToast(`Verification code sent to ${email}`, 'info');
+    }
+
+    function resendForgotCode() {
+      const code = generateVerificationCode(state.forgotEmail);
+      const hint = document.getElementById('forgot-code-hint');
+      if (hint) hint.textContent = `Demo code: ${code}`;
+      showToast('New code sent!', 'info');
+    }
+
+    function verifyForgotCode() {
+      const code = document.getElementById('forgot-code').value.trim();
+      if (!verifyCode(state.forgotEmail, code)) {
+        showToast('Invalid verification code', 'error');
+        return;
+      }
+      state.forgotStep = 3;
+      showModal(renderForgotPasswordModal());
+    }
+
+    function resetPassword() {
+      const newPw = document.getElementById('new-password').value;
+      const confirmPw = document.getElementById('confirm-password').value;
+      if (newPw.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+        return;
+      }
+      if (newPw !== confirmPw) {
+        showToast('Passwords do not match', 'error');
+        return;
+      }
+      // Simulate API call
+      try {
+        api('/auth/reset-password', 'POST', { email: state.forgotEmail, password: newPw });
+      } catch(e) {}
+      closeModal();
+      showToast('Password reset successfully! Please sign in.');
+      state.forgotStep = 1;
+    }
+
+    // ============================================================
+    // CHANGE PASSWORD (from profile)
+    // ============================================================
+    function openChangePassword() {
+      state.changePwStep = 1;
+      showModal(renderChangePasswordModal());
+    }
+
+    function renderChangePasswordModal() {
+      if (state.changePwStep === 1) {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Change Password</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="text-center mb-6">
+              <div class="w-16 h-16 bg-brand-50 rounded-full flex items-center justify-center mx-auto mb-4"><i data-lucide="shield-check" class="w-8 h-8 text-brand-600"></i></div>
+              <p class="text-sm text-slate-500">We'll send a verification code to <span class="font-semibold text-slate-700">${state.user?.email || ''}</span></p>
+            </div>
+            <button onclick="sendChangePwCode()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Send Verification Code</button>
+          </div>`;
+      } else if (state.changePwStep === 2) {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Verify Code</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="text-center mb-6">
+              <p class="text-sm text-slate-500">Enter the 6-digit code sent to <span class="font-semibold text-slate-700">${state.user?.email || ''}</span></p>
+            </div>
+            <div class="space-y-4">
+              <input type="text" id="changepw-code" maxlength="6" required placeholder="000000" class="verification-input w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+              <div id="changepw-code-hint" class="text-center text-xs text-brand-600 font-medium"></div>
+              <button onclick="verifyChangePwCode()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Verify</button>
+              <button onclick="resendChangePwCode()" class="w-full text-brand-600 hover:text-brand-700 py-2 text-sm font-medium">Resend Code</button>
+            </div>
+          </div>`;
+      } else {
+        return `
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-slate-900">Set New Password</h2>
+              <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-4">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">New Password</label><input type="password" id="chpw-new" required minlength="6" placeholder="Min 6 characters" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Confirm Password</label><input type="password" id="chpw-confirm" required minlength="6" placeholder="Confirm new password" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <button onclick="confirmChangePassword()" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Change Password</button>
+            </div>
+          </div>`;
+      }
+    }
+
+    function sendChangePwCode() {
+      const email = state.user?.email;
+      if (!email) { showToast('No email on file', 'error'); return; }
+      const code = generateVerificationCode(email);
+      state.changePwStep = 2;
+      showModal(renderChangePasswordModal());
+      setTimeout(() => {
+        const hint = document.getElementById('changepw-code-hint');
+        if (hint) hint.textContent = `Demo code: ${code}`;
+      }, 100);
+      showToast(`Code sent to ${email}`, 'info');
+    }
+
+    function resendChangePwCode() {
+      const email = state.user?.email;
+      const code = generateVerificationCode(email);
+      const hint = document.getElementById('changepw-code-hint');
+      if (hint) hint.textContent = `Demo code: ${code}`;
+      showToast('New code sent!', 'info');
+    }
+
+    function verifyChangePwCode() {
+      const code = document.getElementById('changepw-code').value.trim();
+      const email = state.user?.email;
+      if (!verifyCode(email, code)) {
+        showToast('Invalid code', 'error');
+        return;
+      }
+      state.changePwStep = 3;
+      showModal(renderChangePasswordModal());
+    }
+
+    function confirmChangePassword() {
+      const pw = document.getElementById('chpw-new').value;
+      const cpw = document.getElementById('chpw-confirm').value;
+      if (pw.length < 6) { showToast('Password must be 6+ characters', 'error'); return; }
+      if (pw !== cpw) { showToast('Passwords do not match', 'error'); return; }
+      try {
+        api('/auth/change-password', 'POST', { password: pw });
+      } catch(e) {}
+      closeModal();
+      state.changePwStep = 1;
+      showToast('Password changed successfully!');
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      try {
+        const data = await api('/auth/login','POST',{email:document.getElementById('login-email').value,password:document.getElementById('login-password').value});
+        setAuth(data.token,data.user); showToast('Welcome back!'); render();
+      } catch(err){}
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      if (!document.getElementById('reg-tnc').checked) {
+        showToast('Please agree to the Terms & Conditions', 'error');
+        return;
+      }
+      try {
+        const data = await api('/auth/register','POST',{name:document.getElementById('reg-name').value,email:document.getElementById('reg-email').value,password:document.getElementById('reg-password').value,role:document.getElementById('reg-role').value});
+        setAuth(data.token,data.user); showToast('Account created!'); render();
+      } catch(err){}
+    }
+
+    // ============================================================
+    // APP LAYOUT
+    // ============================================================
+    function renderApp() {
+      const isTrainer = state.user?.role === 'trainer';
+      const customerMenu = [
+        {id:'dashboard',icon:'layout-dashboard',label:'Dashboard'},
+        {id:'profile',icon:'user-circle',label:'Profile'},
+        {id:'calories',icon:'flame',label:'Calories'},
+        {id:'weight',icon:'trending-down',label:'Weight'},
+        {id:'exercises',icon:'dumbbell',label:'Exercises'},
+        {id:'workouts',icon:'zap',label:'Workouts'},
+        {id:'goals',icon:'target',label:'Goals'},
+        {id:'subscription',icon:'crown',label:'Subscription'},
+        {id:'trainer',icon:'message-circle',label:'Trainer Chat'}
+      ];
+      const trainerMenu = [
+        {id:'dashboard',icon:'layout-dashboard',label:'Dashboard'},
+        {id:'chat',icon:'message-circle',label:'Messages'},
+        {id:'profile',icon:'user-circle',label:'My Profile'}
+      ];
+      const menuItems = isTrainer ? trainerMenu : customerMenu;
+      const title = isTrainer ? 'Trainer Hub' : 'Fitness Hub';
+      const brandIcon = isTrainer ? 'shield' : 'dumbbell';
+
+      return `<div class="flex min-h-screen bg-slate-50">
+        <aside class="hidden lg:flex flex-col w-72 bg-white border-r border-slate-100 fixed h-full z-40">
+          <div class="p-6 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center shadow-md"><i data-lucide="${brandIcon}" class="w-5 h-5 text-white"></i></div>
+              <span class="text-xl font-bold text-slate-900 tracking-tight">${title}</span>
+            </div>
+          </div>
+          <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+            ${menuItems.map(item => `<button onclick="navigate('${item.id}')" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${state.page===item.id ? 'bg-brand-50 text-brand-700 font-semibold border-l-4 border-brand-600' : 'text-slate-500 hover:bg-slate-50 border-l-4 border-transparent'}"><i data-lucide="${item.icon}" class="w-5 h-5"></i>${item.label}</button>`).join('')}
+          </nav>
+          <div class="p-4 border-t border-slate-100">
+            <div class="flex items-center gap-3 px-4 py-2">
+              <div class="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center border-2 border-white shadow-sm"><span class="text-brand-700 text-sm font-bold">${(state.user?.name||'U')[0].toUpperCase()}</span></div>
+              <div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-900 truncate">${state.user?.name||'User'}</p><p class="text-xs text-slate-400 truncate capitalize">${state.user?.role||'Customer'} • ${state.user?.subscription?.plan||'Free'}</p></div>
+              <button onclick="logout()" class="text-slate-300 hover:text-red-500 transition-colors p-1" title="Logout"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+            </div>
+          </div>
+        </aside>
+        <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 z-50 px-2 py-1">
+          <div class="flex justify-around">${menuItems.slice(0,5).map(item=>`<button onclick="navigate('${item.id}')" class="flex flex-col items-center py-2 px-2 rounded-lg transition-all ${state.page===item.id?'text-brand-600':'text-slate-400'}"><i data-lucide="${item.icon}" class="w-5 h-5"></i><span class="text-[10px] mt-0.5 font-medium">${item.label.split(' ')[0]}</span></button>`).join('')}</div>
+        </nav>
+        <main class="flex-1 lg:ml-72 pb-20 lg:pb-0">
+          <div class="max-w-7xl mx-auto p-6 sm:p-8 lg:p-10">
+            <div class="fade-in" id="page-content">${renderPage()}</div>
+          </div>
+        </main>
+      </div>`;
+    }
+
+    function renderPage() {
+      const isTrainer = state.user?.role === 'trainer';
+      if (isTrainer) {
+        switch(state.page) {
+          case 'profile': return renderProfile();
+          case 'chat': return renderChat();
+          default: return renderTrainerDashboard();
+        }
+      }
+      switch(state.page) {
+        case 'profile': return renderProfile();
+        case 'calories': return renderCalories();
+        case 'weight': return renderWeight();
+        case 'exercises': return renderExercises();
+        case 'workouts': return renderWorkouts();
+        case 'goals': return renderGoals();
+        case 'subscription': return renderSubscription();
+        case 'trainer': return renderChat();
+        default: return renderDashboard();
+      }
+    }
+
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    function renderDashboard() {
+      loadDashboardData();
+      const d = state.data.dashboard || {};
+      const totalCal = d.todayCalories || 0;
+      const curWeight = d.currentWeight || '--';
+      const bmi = d.bmi || '--';
+      const plan = d.subscription?.plan || 'free';
+      const bmr = d.bmr || null;
+      const tdee = d.tdee || null;
+      const targetCal = d.targetCalories || null;
+
+      return `
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Dashboard</h1>
+        <p class="text-slate-500 mt-1">Welcome back, ${state.user?.name||'User'}! ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p>
+      </div>
+      <div class="mb-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-8 shadow-xl text-white card-hover">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center border border-white/30"><i data-lucide="bot" class="w-8 h-8"></i></div>
+          <div><h3 class="text-xl font-bold">AI Smart Coach</h3><p class="text-purple-200 text-sm">Personalized insights powered by AI</p></div>
+        </div>
+        <div id="ai-insight-box" class="bg-white/10 border border-white/20 rounded-xl p-5 mb-4 text-sm min-h-[80px] flex items-center"><p class="text-purple-100">Click the button to let the AI analyze your fitness data...</p></div>
+        <button onclick="loadAiInsights()" class="bg-white text-purple-700 px-6 py-3 rounded-lg font-bold hover:bg-purple-50 transition-all shadow-md flex items-center gap-2"><i data-lucide="sparkles" class="w-4 h-4"></i> Generate AI Analysis</button>
+      </div>
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-orange-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="flame" class="w-6 h-6 text-accent-500"></i></div><p class="text-3xl font-bold text-slate-900">${totalCal.toLocaleString()}</p><p class="text-sm text-slate-500 mt-1">Calories Today</p></div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="scale" class="w-6 h-6 text-brand-600"></i></div><p class="text-3xl font-bold text-slate-900">${curWeight}</p><p class="text-sm text-slate-500 mt-1">Weight (kg)</p></div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="activity" class="w-6 h-6 text-blue-600"></i></div><p class="text-3xl font-bold text-slate-900">${bmi}</p><p class="text-sm text-slate-500 mt-1">BMI</p></div>
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="crown" class="w-6 h-6 text-purple-600"></i></div><p class="text-3xl font-bold text-slate-900 capitalize">${plan}</p><p class="text-sm text-slate-500 mt-1">Plan</p></div>
+      </div>
+      ${tdee ? `
+      <div class="bg-gradient-to-r from-brand-700 to-brand-800 rounded-2xl p-8 shadow-xl text-white card-hover mb-8">
+        <h3 class="text-sm font-bold mb-4 text-brand-100 uppercase tracking-wider">Your Fitness Summary</h3>
+        <div class="grid grid-cols-3 gap-6">
+          <div><p class="text-brand-200 text-xs uppercase mb-1">BMR</p><p class="text-4xl font-extrabold">${bmr}</p></div>
+          <div><p class="text-brand-200 text-xs uppercase mb-1">TDEE</p><p class="text-4xl font-extrabold">${tdee}</p></div>
+          <div><p class="text-brand-200 text-xs uppercase mb-1">Target</p><p class="text-4xl font-extrabold">${targetCal}</p></div>
+        </div>
+      </div>` : `
+      <div class="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 shadow-xl text-white card-hover mb-8">
+        <div class="flex items-center gap-5">
+          <div class="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20"><i data-lucide="info" class="w-8 h-8 text-brand-300"></i></div>
+          <div><h3 class="text-xl font-bold mb-1">Complete Your Profile</h3><p class="text-slate-300 text-sm mb-4">Fill in your details to get personalized BMR, TDEE, and target calorie recommendations.</p><button onclick="navigate('profile')" class="bg-white text-slate-900 px-5 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-100 transition-all">Update Profile →</button></div>
+        </div>
+      </div>`}
+      <div class="grid lg:grid-cols-5 gap-6 mb-8">
+        <div class="lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm border border-slate-100"><h3 class="text-lg font-bold text-slate-900 mb-4">Weekly Activity</h3><canvas id="dashboardWeeklyChart" height="200"></canvas></div>
+        <div class="lg:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-slate-100"><h3 class="text-lg font-bold text-slate-900 mb-4">Calorie Breakdown</h3><canvas id="dashboardPieChart" height="200"></canvas></div>
+      </div>`;
+    }
+
+    function initDashboardCharts() {
+      createChart('dashboardWeeklyChart', { type:'bar', data:{ labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets:[{ label:'Burned', data:[320,450,280,520,380,600,420], backgroundColor:'#059669', borderRadius:6, barThickness:20 },{ label:'Consumed', data:[1800,2100,1950,2200,1750,2300,1680], backgroundColor:'#e2e8f0', borderRadius:6, barThickness:20 }]}, options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, padding:16, font:{family:'Inter',size:12} } } }, scales:{ y:{ beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{font:{family:'Inter',size:11}} }, x:{ grid:{display:false}, ticks:{font:{family:'Inter',size:11}} } } } });
+      createChart('dashboardPieChart', { type:'doughnut', data:{ labels:['Protein','Carbs','Fat'], datasets:[{ data:[35,45,20], backgroundColor:['#059669','#3b82f6','#eab308'], borderWidth:0 }] }, options:{ responsive:true, cutout:'65%', plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, padding:16, font:{family:'Inter',size:12} } } } } });
+    }
+
+    async function loadDashboardData() { try { const data = await api('/user/stats'); state.data.dashboard = data; const el = document.getElementById('page-content'); if (el && state.page==='dashboard') { el.innerHTML=renderDashboard(); lucide.createIcons(); initDashboardCharts(); } } catch(err){} }
+    async function loadAiInsights() { const box = document.getElementById('ai-insight-box'); if (!box) return; box.innerHTML = `<p class="animate-pulse text-purple-100">🤖 AI is analyzing your profile and recent activity...</p>`; try { const data = await api('/ai/coach', 'POST'); const formatted = data.insight.replace(/\*\*(.*?)\*\*/g,'<strong class="text-white">$1</strong>').replace(/\n/g,'<br>'); box.innerHTML = `<p>${formatted}</p>`; } catch(err) { box.innerHTML = `<p class="text-red-200">Could not reach AI service. Check server logs.</p>`; } }
+
+    function renderTrainerDashboard() {
+      return `<div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Trainer Dashboard</h1><p class="text-slate-500 mt-1">Manage your clients</p></div><div class="grid grid-cols-2 lg:grid-cols-3 gap-5 mb-8"><div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="users" class="w-6 h-6 text-blue-600"></i></div><p class="text-3xl font-bold text-slate-900">12</p><p class="text-sm text-slate-500 mt-1">Active Clients</p></div><div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-brand-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="message-circle" class="w-6 h-6 text-brand-600"></i></div><p class="text-3xl font-bold text-slate-900">5</p><p class="text-sm text-slate-500 mt-1">Unread Messages</p></div><div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover"><div class="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center mb-3"><i data-lucide="calendar-check" class="w-6 h-6 text-purple-600"></i></div><p class="text-3xl font-bold text-slate-900">8</p><p class="text-sm text-slate-500 mt-1">Sessions Today</p></div></div>`;
+    }
+
+    // ============================================================
+    // PROFILE (ENHANCED with Change Password)
+    // ============================================================
+    function renderProfile() {
+      const u = state.user || {};
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Profile</h1></div>
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-slate-100 text-center">
+          <div class="w-24 h-24 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 mx-auto mb-4 flex items-center justify-center text-4xl font-bold text-white shadow-lg">${(u.name||'U')[0].toUpperCase()}</div>
+          <h3 class="text-xl font-bold text-slate-900">${u.name||'User'}</h3>
+          <p class="text-slate-400 text-sm mt-1">${u.email||''}</p>
+          <div class="mt-4 inline-block px-3 py-1 rounded-full text-xs font-semibold capitalize ${u.role==='trainer'?'bg-purple-100 text-purple-700':'bg-brand-100 text-brand-700'}">${u.role||'Customer'}</div>
+          <hr class="my-6 border-slate-100">
+          <div class="space-y-3 text-left text-sm">
+            <div class="flex justify-between"><span class="text-slate-500">Plan</span><span class="font-semibold text-purple-600 capitalize">${u.subscription?.plan||'Free'}</span></div>
+          </div>
+          <hr class="my-6 border-slate-100">
+          <button onclick="openChangePassword()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2"><i data-lucide="key-round" class="w-4 h-4"></i> Change Password</button>
+        </div>
+        <div class="lg:col-span-2 bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
+          <h3 class="text-lg font-bold text-slate-900 mb-6">Edit Profile</h3>
+          <form onsubmit="handleProfileUpdate(event)" class="space-y-5">
+            <div class="grid sm:grid-cols-2 gap-5">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label><input type="text" id="prof-name" value="${u.name||''}" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Age</label><input type="number" id="prof-age" value="${u.age||''}" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Gender</label><select id="prof-gender" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"><option value="" ${!u.gender?'selected':''}>Select...</option><option value="male" ${u.gender==='male'?'selected':''}>Male</option><option value="female" ${u.gender==='female'?'selected':''}>Female</option></select></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Weight (kg)</label><input type="number" id="prof-weight" value="${u.weight||''}" step="0.1" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Height (cm)</label><input type="number" id="prof-height" value="${u.height||''}" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Fitness Goal</label><select id="prof-goal" class="w-full px-4 py-3 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"><option value="" ${!u.fitnessGoal?'selected':''}>Select...</option><option value="lose" ${u.fitnessGoal==='lose'?'selected':''}>Lose Weight</option><option value="maintain" ${u.fitnessGoal==='maintain'?'selected':''}>Maintain</option><option value="gain" ${u.fitnessGoal==='gain'?'selected':''}>Gain Muscle</option></select></div>
+            </div>
+            <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-8 py-3.5 rounded-lg font-semibold shadow-md transition-all">Save Profile</button>
+          </form>
+        </div>
+      </div>`;
+    }
+
+    async function handleProfileUpdate(e) {
+      e.preventDefault();
+      const body = { name:document.getElementById('prof-name').value, age:parseInt(document.getElementById('prof-age').value)||undefined, gender:document.getElementById('prof-gender').value||undefined, weight:parseFloat(document.getElementById('prof-weight').value)||undefined, height:parseInt(document.getElementById('prof-height').value)||undefined, fitnessGoal:document.getElementById('prof-goal').value||undefined };
+      try { const data = await api('/user/profile','PUT',body); state.user = { ...state.user, ...body }; localStorage.setItem('fh_user',JSON.stringify(state.user)); showToast('Profile updated!'); render(); } catch(err){}
+    }
+
+    // ============================================================
+    // CALORIES (REDESIGNED - Meal Tracker)
+    // ============================================================
+    function renderCalories() {
+      loadCalorieData();
+      const d = state.data.calories || {};
+      const log = d.todayLog || {meals:[], totalCalories:0};
+      const totalCal = log.totalCalories || 0;
+      const goalCal = 2200;
+      const remaining = Math.max(0, goalCal - totalCal);
+      const pct = Math.min(100, Math.round((totalCal/goalCal)*100));
+
+      const mealTypes = [
+        { key:'breakfast', label:'Breakfast', icon:'sunrise', color:'text-amber-500', bg:'bg-amber-50', border:'border-amber-100' },
+        { key:'lunch', label:'Lunch', icon:'sun', color:'text-orange-500', bg:'bg-orange-50', border:'border-orange-100' },
+        { key:'dinner', label:'Dinner', icon:'moon', color:'text-indigo-500', bg:'bg-indigo-50', border:'border-indigo-100' },
+        { key:'snack', label:'Snack', icon:'cookie', color:'text-pink-500', bg:'bg-pink-50', border:'border-pink-100' }
+      ];
+
+      function getMealStats(mealType) {
+        const items = (log.meals||[]).filter(m => m.mealType === mealType);
+        return {
+          calories: items.reduce((s,m)=>s+(m.calories||0),0),
+          protein: items.reduce((s,m)=>s+(m.protein||0),0),
+          carbs: items.reduce((s,m)=>s+(m.carbs||0),0),
+          fat: items.reduce((s,m)=>s+(m.fat||0),0),
+          items
+        };
+      }
+
+      const totalProtein = (log.meals||[]).reduce((s,m)=>s+(m.protein||0),0);
+      const totalCarbs = (log.meals||[]).reduce((s,m)=>s+(m.carbs||0),0);
+      const totalFat = (log.meals||[]).reduce((s,m)=>s+(m.fat||0),0);
+
+      return `
+      <div class="mb-8">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Today</h1>
+            <p class="text-slate-500 mt-1">${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}</p>
+          </div>
+          <button onclick="openAddRecipe()" class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-xl font-semibold text-sm shadow-md transition-all">
+            <i data-lucide="plus" class="w-4 h-4"></i> New Recipe
+          </button>
+        </div>
+      </div>
+
+      <!-- Daily Summary Bar -->
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <span class="text-2xl font-extrabold text-slate-900">${totalCal.toLocaleString()}</span>
+            <span class="text-sm text-slate-400 ml-1">/ ${goalCal.toLocaleString()} kcal</span>
+          </div>
+          <span class="text-sm font-semibold ${remaining > 0 ? 'text-brand-600' : 'text-red-500'}">${remaining > 0 ? remaining.toLocaleString() + ' remaining' : 'Over by ' + Math.abs(remaining).toLocaleString()}</span>
+        </div>
+        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden mb-4">
+          <div class="h-full bg-gradient-to-r ${pct > 90 ? 'from-yellow-500 to-orange-500' : 'from-brand-500 to-brand-600'} rounded-full progress-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-4 text-center">
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Carbs</p><p class="text-lg font-bold text-blue-600">${totalCarbs}g</p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Protein</p><p class="text-lg font-bold text-brand-600">${totalProtein}g</p></div>
+          <div><p class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Fat</p><p class="text-lg font-bold text-yellow-600">${totalFat}g</p></div>
+        </div>
+      </div>
+
+      <!-- Meal Sections -->
+      ${mealTypes.map(meal => {
+        const stats = getMealStats(meal.key);
+        return `
+        <div class="meal-section bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 ${meal.bg} ${meal.border} border rounded-xl flex items-center justify-center"><i data-lucide="${meal.icon}" class="w-5 h-5 ${meal.color}"></i></div>
+              <div>
+                <h3 class="font-bold text-slate-900">${meal.label}</h3>
+                <p class="text-xs text-slate-400">${stats.calories} kcal</p>
+              </div>
+            </div>
+            <button onclick="openFoodSearch('${meal.key}')" class="flex items-center gap-1.5 text-brand-600 hover:text-brand-700 font-semibold text-sm transition-all">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i> Add food
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mb-3">
+            <div class="text-center py-2 bg-blue-50 rounded-lg"><p class="text-[10px] text-blue-400 uppercase font-bold">Carbs</p><p class="text-sm font-bold text-blue-600">${stats.carbs}g</p></div>
+            <div class="text-center py-2 bg-brand-50 rounded-lg"><p class="text-[10px] text-brand-400 uppercase font-bold">Protein</p><p class="text-sm font-bold text-brand-600">${stats.protein}g</p></div>
+            <div class="text-center py-2 bg-yellow-50 rounded-lg"><p class="text-[10px] text-yellow-500 uppercase font-bold">Fat</p><p class="text-sm font-bold text-yellow-600">${stats.fat}g</p></div>
+          </div>
+          ${stats.items.length > 0 ? stats.items.map(item => `
+            <div class="flex items-center justify-between py-2.5 px-3 bg-slate-50 rounded-xl mb-1.5">
+              <div>
+                <p class="text-sm font-medium text-slate-700">${item.name}</p>
+                <p class="text-[10px] text-slate-400">C:${item.carbs||0}g · P:${item.protein||0}g · F:${item.fat||0}g</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-bold text-slate-500">${item.calories}</span>
+                <button onclick="removeMealItem('${meal.key}', '${item.name}')" class="text-slate-300 hover:text-red-500 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+          `).join('') : `<p class="text-xs text-slate-300 text-center py-2">No foods added yet</p>`}
+        </div>`;
+      }).join('')}
+
+      <!-- Charts -->
+      <div class="grid lg:grid-cols-2 gap-6 mt-6">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100"><h3 class="text-lg font-bold text-slate-900 mb-4">Weekly Calorie Trend</h3><canvas id="calorieTrendChart" height="200"></canvas></div>
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100"><h3 class="text-lg font-bold text-slate-900 mb-4">Macros Split</h3><canvas id="macroChart" height="200"></canvas></div>
+      </div>`;
+    }
+
+    function removeMealItem(mealType, foodName) {
+      const log = state.data.calories?.todayLog || {meals:[], totalCalories:0};
+      const idx = log.meals.findIndex(m => m.mealType === mealType && m.name === foodName);
+      if (idx !== -1) {
+        log.meals.splice(idx, 1);
+        log.totalCalories = log.meals.reduce((s,m)=>s+m.calories,0);
+        try { api('/calories/log','PUT', log.meals); } catch(e){}
+        const el = document.getElementById('page-content');
+        if (el && state.page==='calories') { el.innerHTML=renderCalories(); lucide.createIcons(); initCalorieCharts(); }
+        showToast('Food removed');
+      }
+    }
+
+    function initCalorieCharts() {
+      createChart('calorieTrendChart', { type:'line', data:{ labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets:[{ label:'Consumed', data:[1800,2100,1950,2200,1750,2300,1680], borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.08)', fill:true, tension:0.4, pointRadius:4, pointBackgroundColor:'#059669' },{ label:'Goal', data:[2200,2200,2200,2200,2200,2200,2200], borderColor:'#e2e8f0', borderDash:[6,4], pointRadius:0, fill:false }] }, options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, padding:16, font:{family:'Inter',size:12} } } }, scales:{ y:{ beginAtZero:false, grid:{color:'#f1f5f9'}, ticks:{font:{family:'Inter',size:11}} }, x:{ grid:{display:false}, ticks:{font:{family:'Inter',size:11}} } } } });
+      const totalProtein = (state.data.calories?.todayLog?.meals||[]).reduce((s,m)=>s+(m.protein||0),0) || 35;
+      const totalCarbs = (state.data.calories?.todayLog?.meals||[]).reduce((s,m)=>s+(m.carbs||0),0) || 45;
+      const totalFat = (state.data.calories?.todayLog?.meals||[]).reduce((s,m)=>s+(m.fat||0),0) || 20;
+      createChart('macroChart', { type:'doughnut', data:{ labels:['Protein','Carbs','Fat'], datasets:[{ data:[totalProtein,totalCarbs,totalFat], backgroundColor:['#059669','#3b82f6','#eab308'], borderWidth:0 }] }, options:{ responsive:true, cutout:'60%', plugins:{ legend:{ position:'bottom', labels:{ usePointStyle:true, padding:12, font:{family:'Inter',size:12} } } } } });
+    }
+
+    async function loadCalorieData() { try { const todayLog = await api('/calories/today'); state.data.calories = { todayLog }; const el = document.getElementById('page-content'); if (el && state.page==='calories') { el.innerHTML=renderCalories(); lucide.createIcons(); initCalorieCharts(); } } catch(err){} }
+
+    // ============================================================
+    // FOOD SEARCH MODAL
+    // ============================================================
+    function openFoodSearch(mealType) {
+      state.foodSearchMealType = mealType;
+      state.foodSearchQuery = '';
+      state.foodSearchTab = 'library';
+      showModal(renderFoodSearchModal());
+    }
+
+    function renderFoodSearchModal() {
+      const query = state.foodSearchQuery.toLowerCase();
+      let results = [];
+
+      if (state.foodSearchTab === 'library') {
+        results = query ? FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(query)) : FOOD_DATABASE.slice(0, 30);
+      } else if (state.foodSearchTab === 'myfoods') {
+        results = query ? state.myFoods.filter(f => f.name.toLowerCase().includes(query)) : state.myFoods;
+      } else if (state.foodSearchTab === 'myrecipes') {
+        results = query ? state.myRecipes.filter(f => f.name.toLowerCase().includes(query)) : state.myRecipes;
+      }
+
+      const mealLabels = {breakfast:'Breakfast',lunch:'Lunch',dinner:'Dinner',snack:'Snack'};
+
+      return `
+        <div class="flex flex-col max-h-[85vh]">
+          <!-- Header -->
+          <div class="bg-brand-600 text-white p-5 rounded-t-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-lg">Add Food — ${mealLabels[state.foodSearchMealType] || 'Meal'}</h3>
+              <button onclick="closeModal()" class="text-white/70 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="relative">
+              <i data-lucide="search" class="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2"></i>
+              <input type="text" id="food-search-input" value="${state.foodSearchQuery}" oninput="handleFoodSearch(this.value)" placeholder="Search foods..." class="w-full pl-10 pr-4 py-3 bg-white/15 border border-white/20 rounded-xl text-white placeholder-white/50 focus:ring-2 focus:ring-white/30 outline-none text-sm" autofocus>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="flex border-b border-slate-200 px-5 pt-3">
+            <button onclick="switchFoodTab('library')" class="px-4 pb-3 text-sm ${state.foodSearchTab==='library'?'tab-active':'tab-inactive'}">Library</button>
+            <button onclick="switchFoodTab('myfoods')" class="px-4 pb-3 text-sm ${state.foodSearchTab==='myfoods'?'tab-active':'tab-inactive'}">My Foods</button>
+            <button onclick="switchFoodTab('myrecipes')" class="px-4 pb-3 text-sm ${state.foodSearchTab==='myrecipes'?'tab-active':'tab-inactive'}">My Recipes</button>
+          </div>
+
+          <!-- Results -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-1.5" style="max-height:400px;">
+            ${results.length === 0 ? '<p class="text-center text-slate-400 text-sm py-8">No foods found. Try a different search.</p>' : results.map(food => `
+              <div class="food-item flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all border border-transparent hover:border-brand-200" onclick="addFoodToMeal(${JSON.stringify(food).replace(/"/g, '&quot;')})">
+                <div class="flex-1 min-w-0 mr-3">
+                  <p class="text-sm font-semibold text-slate-800 truncate">${food.name}</p>
+                  <p class="text-[11px] text-slate-400">${food.serving || ''}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="text-right">
+                    <p class="text-xs text-slate-500"><span class="text-blue-500 font-semibold">C:${food.carbs}g</span> <span class="text-brand-500 font-semibold">P:${food.protein}g</span> <span class="text-yellow-500 font-semibold">F:${food.fat}g</span></p>
+                    <p class="text-xs font-bold text-slate-700">${food.calories} kcal</p>
+                  </div>
+                  <div class="w-8 h-8 bg-brand-50 rounded-full flex items-center justify-center text-brand-600 hover:bg-brand-100 transition-all flex-shrink-0">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Add Custom Food -->
+          <div class="border-t border-slate-200 p-4">
+            <button onclick="showAddCustomFood()" class="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-slate-500 hover:text-brand-600 hover:border-brand-300 text-sm font-medium transition-all">
+              <i data-lucide="plus" class="w-4 h-4"></i> Add custom food
+            </button>
+          </div>
+        </div>`;
+    }
+
+    function handleFoodSearch(query) {
+      state.foodSearchQuery = query;
+      const root = document.getElementById('modal-root');
+      if (root) {
+        root.querySelector('.slide-up').innerHTML = renderFoodSearchModal();
+        lucide.createIcons();
+        setTimeout(() => {
+          const input = document.getElementById('food-search-input');
+          if (input) { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }
+        }, 50);
+      }
+    }
+
+    function switchFoodTab(tab) {
+      state.foodSearchTab = tab;
+      handleFoodSearch(state.foodSearchQuery);
+    }
+
+    async function addFoodToMeal(food) {
+      const mealEntry = {
+        name: food.name,
+        calories: food.calories,
+        protein: food.protein,
+        carbs: food.carbs,
+        fat: food.fat,
+        mealType: state.foodSearchMealType
+      };
+      try {
+        await api('/calories/log','POST', mealEntry);
+        showToast(`${food.name} added!`);
+        closeModal();
+        loadCalorieData();
+      } catch(err) {
+        // Fallback: add locally
+        if (!state.data.calories) state.data.calories = { todayLog: {meals:[], totalCalories:0} };
+        if (!state.data.calories.todayLog) state.data.calories.todayLog = {meals:[], totalCalories:0};
+        state.data.calories.todayLog.meals.push(mealEntry);
+        state.data.calories.todayLog.totalCalories = state.data.calories.todayLog.meals.reduce((s,m)=>s+m.calories,0);
+        closeModal();
+        const el = document.getElementById('page-content');
+        if (el && state.page==='calories') { el.innerHTML=renderCalories(); lucide.createIcons(); initCalorieCharts(); }
+        showToast(`${food.name} added!`);
+      }
+    }
+
+    function showAddCustomFood() {
+      showModal(renderAddCustomFoodModal());
+    }
+
+    function renderAddCustomFoodModal() {
+      return `
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-slate-900">Add Custom Food</h2>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <form onsubmit="saveCustomFood(event)" class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Food Name</label><input type="text" id="custom-food-name" required placeholder="e.g. My Granola Bar" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Serving Size</label><input type="text" id="custom-food-serving" placeholder="e.g. 1 bar (45g)" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Calories (kcal)</label><input type="number" id="custom-food-cal" required min="0" placeholder="0" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Protein (g)</label><input type="number" id="custom-food-protein" min="0" step="0.1" placeholder="0" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Carbs (g)</label><input type="number" id="custom-food-carbs" min="0" step="0.1" placeholder="0" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+              <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Fat (g)</label><input type="number" id="custom-food-fat" min="0" step="0.1" placeholder="0" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+            </div>
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Save & Add to My Foods</button>
+          </form>
+        </div>`;
+    }
+
+    function saveCustomFood(e) {
+      e.preventDefault();
+      const food = {
+        id: Date.now(),
+        name: document.getElementById('custom-food-name').value,
+        serving: document.getElementById('custom-food-serving').value || '1 serving',
+        calories: parseInt(document.getElementById('custom-food-cal').value) || 0,
+        protein: parseFloat(document.getElementById('custom-food-protein').value) || 0,
+        carbs: parseFloat(document.getElementById('custom-food-carbs').value) || 0,
+        fat: parseFloat(document.getElementById('custom-food-fat').value) || 0,
+        category: 'Custom'
+      };
+      state.myFoods.push(food);
+      localStorage.setItem('fh_myfoods', JSON.stringify(state.myFoods));
+      closeModal();
+      showToast('Custom food saved!');
+      openFoodSearch(state.foodSearchMealType);
+    }
+
+    // ============================================================
+    // ADD RECIPE MODAL
+    // ============================================================
+    function openAddRecipe() {
+      state.recipeIngredients = [];
+      showModal(renderAddRecipeModal());
+    }
+
+    function renderAddRecipeModal() {
+      return `
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-slate-900">Create New Recipe</h2>
+            <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+          </div>
+          <form onsubmit="saveRecipe(event)" class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Recipe Name</label><input type="text" id="recipe-name" required placeholder="e.g. Protein Power Bowl" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Servings</label><input type="number" id="recipe-servings" value="1" min="1" class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"></div>
+
+            <!-- Ingredients -->
+            <div>
+              <label class="block text-sm font-medium text-slate-700 mb-2">Ingredients</label>
+              <div class="relative mb-3">
+                <input type="text" id="recipe-ingr-search" oninput="searchRecipeIngr(this.value)" placeholder="Search ingredient..." class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm">
+                <div id="recipe-ingr-results" class="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-lg mt-1 max-h-40 overflow-y-auto z-10 shadow-lg hidden"></div>
+              </div>
+              <div id="recipe-ingredients-list" class="space-y-2">
+                ${state.recipeIngredients.map((ing, i) => `
+                  <div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                    <div><p class="text-sm font-medium text-slate-700">${ing.name}</p><p class="text-[10px] text-slate-400">${ing.calories} kcal · C:${ing.carbs}g P:${ing.protein}g F:${ing.fat}g</p></div>
+                    <button type="button" onclick="removeRecipeIngredient(${i})" class="text-slate-400 hover:text-red-500"><i data-lucide="x" class="w-4 h-4"></i></button>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Recipe Totals -->
+            ${state.recipeIngredients.length > 0 ? `
+            <div class="bg-brand-50 rounded-xl p-4">
+              <p class="text-xs text-brand-600 font-bold mb-2 uppercase">Recipe Totals (per serving)</p>
+              <div class="grid grid-cols-4 gap-3 text-center">
+                <div><p class="text-lg font-bold text-slate-900">${Math.round(state.recipeIngredients.reduce((s,i)=>s+i.calories,0)/parseInt(document.getElementById('recipe-servings')?.value||1))}</p><p class="text-[10px] text-slate-400">kcal</p></div>
+                <div><p class="text-lg font-bold text-blue-600">${Math.round(state.recipeIngredients.reduce((s,i)=>s+i.carbs,0)*10/parseInt(document.getElementById('recipe-servings')?.value||1))/10}</p><p class="text-[10px] text-slate-400">Carbs</p></div>
+                <div><p class="text-lg font-bold text-brand-600">${Math.round(state.recipeIngredients.reduce((s,i)=>s+i.protein,0)*10/parseInt(document.getElementById('recipe-servings')?.value||1))/10}</p><p class="text-[10px] text-slate-400">Protein</p></div>
+                <div><p class="text-lg font-bold text-yellow-600">${Math.round(state.recipeIngredients.reduce((s,i)=>s+i.fat,0)*10/parseInt(document.getElementById('recipe-servings')?.value||1))/10}</p><p class="text-[10px] text-slate-400">Fat</p></div>
+              </div>
+            </div>` : ''}
+
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Instructions (optional)</label><textarea id="recipe-instructions" rows="3" placeholder="Cooking steps..." class="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-sm resize-none"></textarea></div>
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-3.5 rounded-lg font-semibold shadow-md transition-all">Save Recipe</button>
+          </form>
+        </div>`;
+    }
+
+    function searchRecipeIngr(query) {
+      const container = document.getElementById('recipe-ingr-results');
+      if (!query || query.length < 2) { container.classList.add('hidden'); return; }
+      const results = FOOD_DATABASE.filter(f => f.name.toLowerCase().includes(query.toLowerCase())).slice(0, 8);
+      if (results.length === 0) { container.innerHTML = '<p class="p-3 text-sm text-slate-400">No results</p>'; container.classList.remove('hidden'); return; }
+      container.innerHTML = results.map(f => `
+        <button type="button" onclick="addRecipeIngredient(${f.id})" class="w-full text-left px-3 py-2.5 hover:bg-brand-50 flex items-center justify-between transition-all border-b border-slate-50 last:border-0">
+          <div><p class="text-sm font-medium text-slate-700">${f.name}</p><p class="text-[10px] text-slate-400">${f.serving}</p></div>
+          <span class="text-xs font-semibold text-slate-500">${f.calories} kcal</span>
+        </button>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function addRecipeIngredient(foodId) {
+      const food = FOOD_DATABASE.find(f => f.id === foodId);
+      if (food && !state.recipeIngredients.find(i => i.id === food.id)) {
+        state.recipeIngredients.push({...food});
+        const modal = document.querySelector('.slide-up');
+        if (modal) { modal.innerHTML = renderAddRecipeModal(); lucide.createIcons(); }
+      }
+      document.getElementById('recipe-ingr-results').classList.add('hidden');
+      document.getElementById('recipe-ingr-search').value = '';
+    }
+
+    function removeRecipeIngredient(idx) {
+      state.recipeIngredients.splice(idx, 1);
+      const modal = document.querySelector('.slide-up');
+      if (modal) { modal.innerHTML = renderAddRecipeModal(); lucide.createIcons(); }
+    }
+
+    function saveRecipe(e) {
+      e.preventDefault();
+      if (state.recipeIngredients.length === 0) { showToast('Add at least one ingredient', 'error'); return; }
+      const servings = parseInt(document.getElementById('recipe-servings').value) || 1;
+      const recipe = {
+        id: Date.now(),
+        name: document.getElementById('recipe-name').value,
+        servings,
+        serving: `1 serving`,
+        calories: Math.round(state.recipeIngredients.reduce((s,i)=>s+i.calories,0)/servings),
+        protein: Math.round(state.recipeIngredients.reduce((s,i)=>s+i.protein,0)/servings*10)/10,
+        carbs: Math.round(state.recipeIngredients.reduce((s,i)=>s+i.carbs,0)/servings*10)/10,
+        fat: Math.round(state.recipeIngredients.reduce((s,i)=>s+i.fat,0)/servings*10)/10,
+        ingredients: [...state.recipeIngredients],
+        instructions: document.getElementById('recipe-instructions').value,
+        category: 'Recipe'
+      };
+      state.myRecipes.push(recipe);
+      localStorage.setItem('fh_recipes', JSON.stringify(state.myRecipes));
+      closeModal();
+      showToast('Recipe saved!');
+    }
+
+    // ============================================================
+    // WEIGHT
+    // ============================================================
+    function renderWeight() {
+      loadWeightData();
+      const history = state.data.weight?.history || [];
+      const curWeight = history.length ? history[history.length-1].weight : '--';
+      return `<div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Weight Tracker</h1></div><div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6"><h3 class="text-lg font-bold text-slate-900 mb-5">Log Weight</h3><form onsubmit="handleWeightLog(event)" class="grid sm:grid-cols-3 gap-4"><input type="number" id="weight-val" step="0.1" min="20" required placeholder="Weight (kg)" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"><input type="date" id="weight-date" value="${new Date().toISOString().split('T')[0]}" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none"><button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold shadow-md transition-all">Save</button></form></div><div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100"><h3 class="text-lg font-bold text-slate-900 mb-4">Weight History</h3><canvas id="weightChart" height="220"></canvas></div>`;
+    }
+
+    function initWeightChart() {
+      const h = state.data.weight?.history || [];
+      createChart('weightChart', { type:'line', data:{ labels:h.map(w=>new Date(w.date).toLocaleDateString), datasets:[{ label:'Weight (kg)', data:h.map(w=>w.weight), borderColor:'#059669', backgroundColor:'rgba(5,150,105,0.1)', fill:true, tension:0.4, pointRadius:5, pointBackgroundColor:'#059669', pointBorderColor:'#fff', pointBorderWidth:2 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ grid:{color:'#f1f5f9'}, ticks:{font:{family:'Inter',size:11}} }, x:{ grid:{display:false}, ticks:{font:{family:'Inter',size:11}} } } } });
+    }
+
+    async function loadWeightData() { try { const history = await api('/weight/history'); state.data.weight = { history }; const el = document.getElementById('page-content'); if (el && state.page==='weight') { el.innerHTML=renderWeight(); lucide.createIcons(); initWeightChart(); } } catch(err){} }
+    
+    async function handleWeightLog(e) { 
+      e.preventDefault(); 
+      try {
+        await api('/weight/log','POST',{weight:parseFloat(document.getElementById('weight-val').value),date:document.getElementById('weight-date').value}); 
+        showToast('Weight logged!'); loadWeightData(); 
+      } catch(err){} 
+    }
+
+    // ============================================================
+    // EXERCISES
+    // ============================================================
+    function renderExercises() {
+      loadExercises();
+      const list = state.data.exercises?.list || [];
+      const catColors = {Cardio:'bg-red-50 text-red-600',Strength:'bg-blue-50 text-blue-600',Core:'bg-green-50 text-green-600',HIIT:'bg-yellow-50 text-yellow-700',Flexibility:'bg-purple-50 text-purple-600'};
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Exercises</h1><p class="text-slate-500 mt-1">Browse and discover exercises for your routine</p></div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        ${list.length === 0 ? '<p class="text-slate-400 col-span-3 text-center py-12">Loading exercises...</p>' : list.map(ex => `
+        <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-100 card-hover">
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-bold text-lg text-slate-900">${ex.name}</h3>
+              <span class="px-2.5 py-1 rounded-md text-xs font-semibold ${catColors[ex.category]||'bg-slate-100 text-slate-600'}">${ex.category}</span>
+            </div>
+            <p class="text-sm text-slate-500 mb-4">${ex.description}</p>
+            <div class="flex items-center gap-5 text-xs text-slate-500 font-medium">
+              <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3.5 h-3.5"></i> ${ex.duration} min</span>
+              <span class="flex items-center gap-1"><i data-lucide="flame" class="w-3.5 h-3.5"></i> ${ex.caloriesBurned} cal</span>
+            </div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    async function loadExercises() { try { const list = await api('/exercises'); state.data.exercises = { list }; const el = document.getElementById('page-content'); if (el && state.page==='exercises') { el.innerHTML=renderExercises(); lucide.createIcons(); } } catch(err){} }
+
+    // ============================================================
+    // WORKOUTS
+    // ============================================================
+    function renderWorkouts() {
+      loadWorkoutData();
+      const list = state.data.workouts?.list || [];
+      const tc = {Cardio:'bg-red-50 text-red-600',Strength:'bg-blue-50 text-blue-600',HIIT:'bg-yellow-50 text-yellow-700',Flexibility:'bg-green-50 text-green-600',Sports:'bg-purple-50 text-purple-600'};
+      const ti = {Cardio:'heart-pulse',Strength:'dumbbell',HIIT:'zap',Flexibility:'stretch-horizontal',Sports:'trophy'};
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Workouts</h1></div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Log Workout</h3>
+        <form onsubmit="handleAddWorkout(event)" class="grid sm:grid-cols-2 gap-3">
+          <input type="text" id="wk-name" placeholder="Workout name" required class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <select id="wk-type" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none bg-white"><option>Cardio</option><option>Strength</option><option>Flexibility</option><option>HIIT</option><option>Sports</option></select>
+          <input type="number" id="wk-dur" placeholder="Duration (min)" required min="1" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <input type="number" id="wk-cal" placeholder="Calories burned" min="0" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <button type="submit" class="sm:col-span-2 bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold shadow-md transition-all">+ Log Workout</button>
+        </form>
+      </div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Workout Duration (Last 7 Days)</h3>
+        <canvas id="workoutBarChart" height="180"></canvas>
+      </div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Workout History</h3>
+        ${list.length === 0 ? '<p class="text-slate-400 text-sm text-center py-8">No workouts logged yet.</p>' : list.map(w => `
+        <div class="flex items-center justify-between py-4 px-4 bg-slate-50 rounded-xl mb-3">
+          <div class="flex items-center gap-4">
+            <div class="w-11 h-11 rounded-xl ${tc[w.type]||'bg-slate-100'} flex items-center justify-center"><i data-lucide="${ti[w.type]||'dumbbell'}" class="w-5 h-5"></i></div>
+            <div>
+              <p class="font-semibold text-slate-900 text-sm">${w.name}</p>
+              <p class="text-xs text-slate-400">${new Date(w.date).toLocaleDateString()} · <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold ${tc[w.type]||''}">${w.type}</span></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-5">
+            <div class="text-center"><p class="text-lg font-bold text-slate-900">${w.duration}</p><p class="text-[10px] text-slate-400">min</p></div>
+            <div class="text-center"><p class="text-lg font-bold text-red-500">${w.calories||0}</p><p class="text-[10px] text-slate-400">kcal</p></div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }
+
+    function initWorkoutCharts() {
+      createChart('workoutBarChart', { type:'bar', data:{ labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], datasets:[{ label:'Duration (min)', data:[45,60,0,30,50,0,55], backgroundColor: ctx => ctx.raw === 0 ? '#f1f5f9' : '#059669', borderRadius:6, barThickness:28 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, grid:{color:'#f1f5f9'}, ticks:{font:{family:'Inter',size:11}} }, x:{ grid:{display:false}, ticks:{font:{family:'Inter',size:11}} } } } });
+    }
+
+    async function loadWorkoutData() { try { const list = await api('/workouts'); state.data.workouts = { list }; const el = document.getElementById('page-content'); if (el && state.page==='workouts') { el.innerHTML=renderWorkouts(); lucide.createIcons(); initWorkoutCharts(); } } catch(err){} }
+
+    async function handleAddWorkout(e) { 
+      e.preventDefault(); 
+      try {
+        await api('/workouts','POST',{name:document.getElementById('wk-name').value,type:document.getElementById('wk-type').value,duration:parseInt(document.getElementById('wk-dur').value),calories:parseInt(document.getElementById('wk-cal').value)||0}); 
+        showToast('Workout logged!'); loadWorkoutData(); 
+      } catch(err){} 
+    }
+
+    // ============================================================
+    // GOALS
+    // ============================================================
+    function renderGoals() {
+      loadGoalData();
+      const goals = state.data.goals?.list || [];
+      const goalColors = ['#059669','#3b82f6','#eab308','#a855f7','#ef4444','#f97316'];
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Goals</h1><p class="text-slate-500 mt-1">Track your fitness milestones</p></div>
+      <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 mb-6">
+        <h3 class="text-lg font-bold text-slate-900 mb-4">Create New Goal</h3>
+        <form onsubmit="handleAddGoal(event)" class="grid sm:grid-cols-2 gap-3">
+          <input type="text" id="goal-title" placeholder="Goal title" required class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <input type="number" id="goal-target" placeholder="Target value" required min="1" step="0.1" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <input type="text" id="goal-unit" placeholder="Unit (e.g. km, lbs, days)" required class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <input type="number" id="goal-current" placeholder="Current progress" value="0" min="0" step="0.1" class="px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand-500 outline-none">
+          <button type="submit" class="sm:col-span-2 bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-lg font-semibold shadow-md transition-all">Create Goal</button>
+        </form>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-5">
+        ${goals.length === 0 ? '<p class="text-slate-400 text-sm text-center py-8 col-span-2">No goals created yet.</p>' : goals.map((g, i) => {
+          const pct = Math.min(100, Math.round((g.current / g.target) * 100));
+          const color = goalColors[i % goalColors.length];
+          return `<div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 card-hover">
+            <div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-900">${g.title}</h3><span class="text-xs font-semibold" style="color:${color}">${pct}%</span></div>
+            <div class="w-full h-2.5 bg-slate-100 rounded-full mb-3 overflow-hidden"><div class="h-full rounded-full progress-fill" style="width:${pct}%;background:${color}"></div></div>
+            <div class="flex justify-between text-xs text-slate-500"><span>${g.current} / ${g.target} ${g.unit}</span><span>${g.target - g.current > 0 ? (g.target - g.current).toFixed(1) + ' ' + g.unit + ' left' : 'Completed!'}</span></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+
+    async function loadGoalData() { try { const list = await api('/goals'); state.data.goals = { list }; const el = document.getElementById('page-content'); if (el && state.page==='goals') { el.innerHTML=renderGoals(); lucide.createIcons(); } } catch(err){} }
+
+    async function handleAddGoal(e) { 
+      e.preventDefault(); 
+      try {
+        await api('/goals','POST',{title:document.getElementById('goal-title').value,target:parseFloat(document.getElementById('goal-target').value),unit:document.getElementById('goal-unit').value,current:parseFloat(document.getElementById('goal-current').value)||0}); 
+        showToast('Goal created!'); loadGoalData(); 
+      } catch(err){} 
+    }
+
+    // ============================================================
+    // SUBSCRIPTION
+    // ============================================================
+    function renderSubscription() {
+      const plan = state.user?.subscription?.plan || 'free';
+      const isPremium = plan === 'premium';
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Subscription</h1><p class="text-slate-500 mt-1">Manage your plan</p></div>
+      <div class="grid md:grid-cols-2 gap-8 max-w-4xl">
+        <div class="bg-white rounded-2xl p-8 shadow-sm border ${!isPremium ? 'border-brand-500 ring-2 ring-brand-500' : 'border-slate-100'} card-hover">
+          <h3 class="text-2xl font-bold text-slate-900 mb-2">Free</h3>
+          <p class="text-slate-500 text-sm mb-6">Basic fitness tracking features.</p>
+          <p class="text-4xl font-extrabold text-slate-900 mb-6">$0<span class="text-lg text-slate-400 font-normal">/mo</span></p>
+          <ul class="space-y-3 mb-8 text-sm text-slate-600">
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-500"></i>Basic calorie tracking</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-500"></i>Weight logging</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-500"></i>Exercise database</li>
+            <li class="flex items-center gap-2 text-slate-300"><i data-lucide="x" class="w-4 h-4"></i>AI Coach</li>
+            <li class="flex items-center gap-2 text-slate-300"><i data-lucide="x" class="w-4 h-4"></i>Trainer chat</li>
+          </ul>
+          <button class="w-full py-3 rounded-lg font-semibold border-2 ${!isPremium ? 'border-brand-600 text-brand-600 bg-brand-50' : 'border-slate-200 text-slate-400'}" ${!isPremium ? 'disabled' : ''}>${!isPremium ? 'Current Plan' : 'Downgrade'}</button>
+        </div>
+        <div class="bg-gradient-to-br from-brand-600 to-brand-800 rounded-2xl p-8 shadow-xl text-white card-hover">
+          <h3 class="text-2xl font-bold mb-2">Premium</h3>
+          <p class="text-brand-200 text-sm mb-6">Unlock your full potential.</p>
+          <p class="text-4xl font-extrabold mb-6">$9.99<span class="text-lg text-brand-200 font-normal">/mo</span></p>
+          <ul class="space-y-3 mb-8 text-sm">
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-200"></i>Advanced calorie tracking</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-200"></i>Weight logging</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-200"></i>Exercise database</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-200"></i>AI Smart Coach</li>
+            <li class="flex items-center gap-2"><i data-lucide="check" class="w-4 h-4 text-brand-200"></i>Direct Trainer Chat</li>
+          </ul>
+          <button onclick="handleSubscribe()" class="w-full py-3 rounded-lg font-semibold bg-white text-brand-700 hover:bg-brand-50 transition-all shadow-md">${isPremium ? 'Current Plan' : 'Upgrade Now'}</button>
+        </div>
+      </div>`;
+    }
+
+    function handleSubscribe() {
+      if (state.user?.subscription?.plan === 'premium') return;
+      state.user.subscription = { plan: 'premium' };
+      localStorage.setItem('fh_user', JSON.stringify(state.user));
+      showToast('Upgraded to Premium!');
+      render();
+    }
+
+    // ============================================================
+    // CHAT
+    // ============================================================
+    function renderChat() {
+      return `
+      <div class="mb-8"><h1 class="text-3xl font-bold text-slate-900 tracking-tight">Trainer Chat</h1></div>
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden" style="height: 70vh; display: flex; flex-direction: column;">
+        <div class="p-4 border-b border-slate-100 flex items-center gap-3">
+          <div class="w-10 h-10 bg-brand-100 rounded-full flex items-center justify-center"><i data-lucide="user" class="w-5 h-5 text-brand-600"></i></div>
+          <div><p class="font-bold text-slate-900">Coach Mike</p><p class="text-xs text-brand-500">Online</p></div>
+        </div>
+        <div class="flex-1 p-6 overflow-y-auto bg-slate-50 space-y-4">
+          <div class="flex gap-3"><div class="w-8 h-8 bg-brand-100 rounded-full flex-shrink-0 flex items-center justify-center text-brand-600 text-xs font-bold">M</div><div class="bg-white p-4 rounded-2xl rounded-tl-sm shadow-sm max-w-sm"><p class="text-sm text-slate-700">Hey! How's your fitness journey going? Ready for today's workout?</p></div></div>
+          <div class="flex gap-3 justify-end"><div class="bg-brand-600 text-white p-4 rounded-2xl rounded-tr-sm shadow-sm max-w-sm"><p class="text-sm">I'm doing great! Just finished logging my meals for today.</p></div><div class="w-8 h-8 bg-brand-600 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold">${(state.user?.name||'U')[0].toUpperCase()}</div></div>
+        </div>
+        <div class="p-4 border-t border-slate-100 bg-white">
+          <div class="flex gap-3">
+            <input type="text" placeholder="Type a message..." class="flex-1 px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none">
+            <button class="bg-brand-600 hover:bg-brand-700 text-white px-5 py-3 rounded-xl font-semibold transition-all"><i data-lucide="send" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ============================================================
+    // INITIALIZE
+    // ============================================================
+    render();
+
+  </script>
+</body>
+</html>
